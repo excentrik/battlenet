@@ -116,6 +116,7 @@ class Connection(object):
         realm = quote(realm.lower()).replace("%20", '-')
 
         try:
+
             data = self.make_request(region, '/character/%s/%s' % (realm, name), {'fields': fields})
 
             if raw:
@@ -205,4 +206,5 @@ class Connection(object):
 
     def get_item(self, region, item_id, raw=False):
         data = self.make_request(region, '/item/%d' % item_id)
+
         return data

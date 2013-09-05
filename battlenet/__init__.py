@@ -41,6 +41,7 @@ from .things import EquippedItem
 from .things import Class
 from .things import Race
 from .things import Raid
+from .things import Item
 
 from .utils import normalize
 from .utils import quote

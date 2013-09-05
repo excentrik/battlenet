@@ -1,7 +1,7 @@
 import operator
 import collections
 import datetime
-from .enums import RACE, CLASS, QUALITY, RACE_TO_FACTION, RAIDS, EXPANSION
+from .enums import RACE, CLASS, QUALITY, RACE_TO_FACTION, RAIDS, EXPANSION, ITEMTYPE
 from .utils import make_icon_url, normalize, make_connection
 
 try:
@@ -9,7 +9,7 @@ try:
 except ImportError:
     import json
 
-__all__ = ['Character', 'Guild', 'Realm', 'Raid']
+__all__ = ['Character', 'Guild', 'Realm', 'Raid', 'Item']
 
 
 class Thing(object):
@@ -122,16 +122,17 @@ class Character(LazyThing):
     HUNTER_PETS = 'hunterPets'
     PROGRESSION = 'progression'
     ACHIEVEMENTS = 'achievements'
+    FEED = 'feed'
     ALL_FIELDS = [STATS, TALENTS, ITEMS, REPUTATIONS, TITLES, PROFESSIONS,
                   APPEARANCE, COMPANIONS, MOUNTS, GUILD, QUESTS, HUNTER_PETS,
-                  PROGRESSION, ACHIEVEMENTS]
+                  PROGRESSION, ACHIEVEMENTS, FEED]
 
     def __init__(self, region, realm=None, name=None, data=None, fields=None, connection=None):
         super(Character, self).__init__(data, fields)
 
         self.region = region
         self.connection = connection or make_connection()
-
+        #print self.connection
         if realm and name and not data:
             data = self.connection.get_character(region, realm, name, raw=True, fields=self._fields)
 
@@ -162,6 +163,9 @@ class Character(LazyThing):
         self.gender = data['gender']
         self.achievement_points = data['achievementPoints']
         self.faction = RACE_TO_FACTION[self.race]
+
+        if 'feed' in data:
+            self.feed=data['feed']
 
         if Character.GUILD in self._fields and Character.GUILD not in self._data:
             self._data[Character.GUILD] = None
@@ -923,7 +927,7 @@ class Class(Thing):
         self.mask = data['mask']
         self.name = data['name']
         self.power_type = data['powerType']
-        
+
     def __str__(self):
         return self.name
 
@@ -956,3 +960,50 @@ class Raid(Thing):
                     if EXPANSION[e][0] == exp:
                         return exp, EXPANSION[e][1]
         return (None, None)
+
+class Item(Thing):
+
+    def __init__(self, region,id,connection=None):
+        super(Item, self).__init__(id)
+
+        self._region = region
+        self.connection = connection or make_connection()
+
+        self._data=connection.get_item(region, id)
+        #print self._data
+        #quit()
+        self.id = self._data['id']
+        self.name = '"' + self._data['name'] + '"'
+        self.ilvl = self._data['itemLevel']
+        self.stats_raw =self._data['bonusStats']
+        self.itemtype=self._data['inventoryType']
+        self.quality = self._data['quality']
+        #self.icon = data['icon']
+        self.nameDescription= self._data['nameDescription']
+
+        #self.reforge = data['tooltipParams'].get('reforge')
+        #self.set = data['tooltipParams'].get('set')
+        #self.enchant = data['tooltipParams'].get('enchant')
+        #self.extra_socket = data['tooltipParams'].get('extraSocket', False)
+
+        #self.gems = collections.defaultdict(lambda: None)
+
+        #for key, value in self._data['tooltipParams'].items():
+            #if key.startswith('gem'):
+                #self.gems[int(key[3:])] = value
+
+    def __str__(self):
+        return ' - '.join([self.name + ' (' +str(self.id) + ')',self.nameDescription,self.get_itemtype_name(),str(self.stats_raw)])
+
+    def __repr__(self):
+        return '<%s: %s>' % (self.__class__.__name__, self.name)
+
+    def get_quality_name(self):
+        return QUALITY.get(self.quality, 'Unknown')
+
+    def get_itemtype_name(self):
+        return ITEMTYPE.get(self.itemtype, 'Unknown')
+
+
+    def get_icon_url(self, size='large'):
+        return make_icon_url(self._region, self.icon, size)
